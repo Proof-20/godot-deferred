@@ -32,6 +32,38 @@ engine, used to publish several work-for-hire titles.
 
 ![Screenshot of a 3D scene in the Godot Engine editor](https://raw.githubusercontent.com/godotengine/godot-design/master/screenshots/editor_tps_demo_1920x1080.jpg)
 
+## Additional info
+
+I got this idea lately to create an new rendering mode for Godot that can sustain an new way to 
+create and render games with it, and i think the core idea is pretty interesting for how much i think so.
+
+It's a bit complicated to explain exactly how this Deferred+ concept will work from start to finish, mainly because I'm not yet familiar with 
+Godot's rendering architecture. For now, I'm building on the ideas, techniques and architectural decisions I've developed for my own custom engine, 
+adapting them to fit Godot's rendering system.
+
+### What is Deferred+?
+
+Deferred+ is an experimental hybrid rendering architecture concept for Godot,
+designed around a unified pipeline that combines deferred shading, forward rendering, 
+compute based effects, and optional hardware accelerated ray tracing
+
+Instead of relying on a single rendering technique, Deferred+ uses specialized rendering 
+passes depending on the requirements of each material and effect.
+
+Opaque geometry is processed through a G-buffer and clustered deferred lighting, while transparent 
+and specialized materials are rendered through dedicated forward passes. Both paths share lighting, 
+shadow, depth, and environment information to maintain visual consistency.
+
+Screen-space effects, volumetric rendering, temporal processing, and ray-traced effects are integrated 
+through a dependency-driven rendering pipeline, allowing different techniques to contribute to the 
+same final image.
+
+The architecture is designed to remain fully functional without hardware ray tracing, while allowing 
+more advanced rendering capabilities on supported GPUs.
+
+The goal of Deferred+ is to create a flexible hybrid rendering system where deferred, forward, 
+and ray-traced techniques complement each other, rather than compete as separate rendering methods.
+
 ## Getting the engine
 
 ### Binary downloads
