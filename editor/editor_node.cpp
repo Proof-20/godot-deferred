@@ -6232,6 +6232,8 @@ String EditorNode::_get_system_info() const {
 	// Prettify
 	if (rendering_method == "forward_plus") {
 		rendering_method = "Forward+";
+	} else if (rendering_method == "deferred") {
+		rendering_method = "Deferred+";
 	} else if (rendering_method == "mobile") {
 		rendering_method = "Mobile";
 	} else if (rendering_method == "gl_compatibility") {
@@ -7941,7 +7943,7 @@ void EditorNode::_renderer_selected(int p_index) {
 		video_restart_dialog->disconnect(SceneStringName(confirmed), callable_mp(this, &EditorNode::_set_renderer_name_save_and_restart));
 	}
 
-	const String mobile_rendering_method = rendering_method == "forward_plus" ? "mobile" : rendering_method;
+	const String mobile_rendering_method = (rendering_method == "forward_plus" || rendering_method == "deferred") ? "mobile" : rendering_method;
 	const String web_rendering_method = "gl_compatibility";
 	video_restart_dialog->connect(SceneStringName(confirmed), callable_mp(this, &EditorNode::_set_renderer_name_save_and_restart).bind(rendering_method));
 	video_restart_dialog->set_text(
@@ -7956,6 +7958,9 @@ String EditorNode::_to_rendering_method_display_name(const String &p_rendering_m
 	if (p_rendering_method == "forward_plus") {
 		return TTR("Forward+");
 	}
+	if (p_rendering_method == "deferred") {
+		return TTR("Deferred+");
+	}
 	if (p_rendering_method == "mobile") {
 		return TTR("Mobile");
 	}
@@ -7968,11 +7973,16 @@ String EditorNode::_to_rendering_method_display_name(const String &p_rendering_m
 void EditorNode::_set_renderer_name_save_and_restart(const String &p_rendering_method) {
 	ProjectSettings::get_singleton()->set("rendering/renderer/rendering_method", p_rendering_method);
 
+	if (p_rendering_method == "deferred") {
+		ProjectSettings::get_singleton()->set("rendering/rendering_device/driver", "vulkan");
+		ProjectSettings::get_singleton()->set("rendering/rendering_device/driver.windows", "vulkan");
+	}
+
 	if (p_rendering_method == "mobile" || p_rendering_method == "gl_compatibility") {
 		// Also change the mobile override if changing to a compatible renderer.
 		// This prevents visual discrepancies between desktop and mobile platforms.
 		ProjectSettings::get_singleton()->set("rendering/renderer/rendering_method.mobile", p_rendering_method);
-	} else if (p_rendering_method == "forward_plus") {
+	} else if (p_rendering_method == "forward_plus" || p_rendering_method == "deferred") {
 		// Use the equivalent mobile renderer. This prevents the renderer from staying
 		// on its old choice if moving from `gl_compatibility` to `forward_plus`.
 		ProjectSettings::get_singleton()->set("rendering/renderer/rendering_method.mobile", "mobile");
@@ -9351,6 +9361,10 @@ EditorNode::EditorNode() {
 			}
 			renderer->add_item(String()); // Set in NOTIFICATION_TRANSLATION_CHANGED.
 			renderer->set_item_metadata(-1, rendering_method);
+			if (rendering_method == "deferred") {
+				const int item_index = renderer->get_item_count() - 1;
+				renderer->set_item_tooltip(item_index, TTR("Deferred+ is under development. 3D geometry is not supported yet."));
+			}
 			if (current_renderer_ps == rendering_method) {
 				renderer->select(i);
 			}

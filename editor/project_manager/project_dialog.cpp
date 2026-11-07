@@ -507,6 +507,9 @@ void ProjectDialog::_renderer_selected() {
 				String::utf8("\n•  ") + TTR("Uses RenderingDevice backend.") +
 				String::utf8("\n•  ") + TTR("Slower rendering of simple scenes."));
 		rd_error = !rendering_device_supported;
+	} else if (renderer_type == "deferred") {
+		renderer_info->set_text(TTR("Deferred+ is under development. Vulkan is selected automatically. 3D geometry is not supported yet."));
+		rd_error = !rendering_device_supported;
 	} else if (renderer_type == "mobile") {
 		renderer_info->set_text(
 				String::utf8("•  ") + TTR("Supports desktop + mobile platforms.") +
@@ -584,6 +587,11 @@ void ProjectDialog::ok_pressed() {
 
 		if (renderer_type == "forward_plus") {
 			project_features.push_back("Forward Plus");
+		} else if (renderer_type == "deferred") {
+			project_features.push_back("Deferred Plus");
+			initial_settings["rendering/rendering_device/driver"] = "vulkan";
+			initial_settings["rendering/rendering_device/driver.windows"] = "vulkan";
+			initial_settings["rendering/renderer/rendering_method.mobile"] = "mobile";
 		} else if (renderer_type == "mobile") {
 			project_features.push_back("Mobile");
 		} else if (renderer_type == "gl_compatibility") {
@@ -1120,6 +1128,20 @@ ProjectDialog::ProjectDialog() {
 	Container *rvb = memnew(VBoxContainer);
 	rshc->add_child(rvb);
 
+	Button *deferred_button = memnew(CheckBox);
+	deferred_button->set_button_group(renderer_button_group);
+	deferred_button->set_text(TTRC("Deferred+"));
+	deferred_button->set_accessibility_name(TTRC("Renderer:"));
+	deferred_button->set_meta(SNAME("rendering_method"), "deferred");
+#if !defined(RD_ENABLED) || !defined(DEFERRED_RD_ENABLED) || !defined(VULKAN_ENABLED)
+	deferred_button->set_disabled(true);
+	deferred_button->set_tooltip_text(TTRC("Deferred+ is not enabled in this build."));
+#else
+	deferred_button->set_tooltip_text(TTRC("Deferred+ is under development. 3D geometry is not supported yet."));
+#endif
+	deferred_button->connect(SceneStringName(pressed), callable_mp(this, &ProjectDialog::_renderer_selected));
+	rvb->add_child(deferred_button);
+
 	String default_renderer_type = "forward_plus";
 	if (EditorSettings::get_singleton()->has_setting("project_manager/default_renderer")) {
 		default_renderer_type = EditorSettings::get_singleton()->get_setting("project_manager/default_renderer");
@@ -1138,6 +1160,9 @@ ProjectDialog::ProjectDialog() {
 	rvb->add_child(rs_button);
 	if (default_renderer_type == "forward_plus") {
 		rs_button->set_pressed(true);
+	}
+	if (default_renderer_type == "deferred" && !deferred_button->is_disabled()) {
+		deferred_button->set_pressed(true);
 	}
 	rs_button = memnew(CheckBox);
 	rs_button->set_button_group(renderer_button_group);

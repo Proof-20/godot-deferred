@@ -39,6 +39,10 @@
 #include "servers/rendering/renderer_rd/forward_mobile/render_forward_mobile.h"
 #include "servers/rendering/rendering_server_types.h"
 
+#ifdef DEFERRED_RD_ENABLED
+#include "servers/rendering/renderer_rd/deferred/render_deferred.h"
+#endif
+
 void RendererCompositorRD::blit_render_targets_to_screen(DisplayServerEnums::WindowID p_screen, const RenderingServerTypes::BlitToScreen *p_render_targets, int p_amount) {
 	Error err = RD::get_singleton()->screen_prepare_for_drawing(p_screen);
 	if (err != OK) {
@@ -374,21 +378,24 @@ RendererCompositorRD::RendererCompositorRD() {
 	String rendering_method = OS::get_singleton()->get_current_rendering_method();
 	uint64_t textures_per_stage = RD::get_singleton()->limit_get(RD::LIMIT_MAX_TEXTURES_PER_SHADER_STAGE);
 
-	if (rendering_method == "mobile" || textures_per_stage < 48) {
-		if (rendering_method == "forward_plus") {
+	if (rendering_method == "deferred") {
+#ifdef DEFERRED_RD_ENABLED
+		scene = memnew(RendererSceneRenderImplementation::RenderDeferred());
+#else
+		ERR_FAIL_MSG("Deferred+ is not enabled in this build.");
+#endif
+	} else if (rendering_method == "mobile" || textures_per_stage < 48) {
+		if (rendering_method == "forward_plus")
 			WARN_PRINT_ONCE("Platform supports less than 48 textures per stage which is less than required by the Clustered renderer. Attempting to fallback to the Mobile renderer.");
-		}
 #ifdef MOBILE_RD_ENABLED
 		scene = memnew(RendererSceneRenderImplementation::RenderForwardMobile());
-#endif // MOBILE_RD_ENABLED
+#endif
 	} else {
-		if (rendering_method != "forward_plus") {
-			// Fall back to our high end renderer.
+		if (rendering_method != "forward_plus")
 			ERR_PRINT(vformat("Cannot instantiate RenderingDevice-based renderer with renderer type '%s'. Attempting to fallback to the to Forward+ renderer.", rendering_method));
-		}
 #ifdef FORWARD_RD_ENABLED
 		scene = memnew(RendererSceneRenderImplementation::RenderForwardClustered());
-#endif // FORWARD_RD_ENABLED
+#endif
 	}
 
 	ERR_FAIL_NULL_MSG(scene, "No RendererSceneRenderRDs available.");

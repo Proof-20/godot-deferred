@@ -203,6 +203,7 @@ opts.Add(
 )
 opts.Add(BoolVariable("forward_plus_renderer", "Enable the Forward+ renderer (requires RenderingDevice)", True))
 opts.Add(BoolVariable("forward_mobile_renderer", "Enable the Mobile renderer (requires RenderingDevice)", True))
+opts.Add(BoolVariable("deferred_renderer", "Expose the Deferred+ renderer under development (requires RenderingDevice and Vulkan)", True))
 opts.Add(BoolVariable("vulkan", "Enable the Vulkan rendering driver", True))
 opts.Add(BoolVariable("opengl3", "Enable the OpenGL/GLES3 rendering driver", True))
 opts.Add(BoolVariable("d3d12", "Enable the Direct3D 12 rendering driver on supported platforms", False))
@@ -711,6 +712,10 @@ if env["scu_build"]:
 
     methods.set_scu_folders(scu_builders.generate_scu_files(max_includes_per_scu))
 
+if env["deferred_renderer"] and (not env["rendering_device"] or env["platform"] == "web"):
+    print_error("Deferred+ requires RenderingDevice on a supported native platform.")
+    Exit(255)
+
 if env["rendering_device"]:
     if env["platform"] == "web":
         # Not available in the web platform.
@@ -721,8 +726,10 @@ if env["rendering_device"]:
             env.Append(CPPDEFINES=["MOBILE_RD_ENABLED"])
         if env["forward_plus_renderer"]:
             env.Append(CPPDEFINES=["FORWARD_RD_ENABLED"])
+        if env["deferred_renderer"]:
+            env.Append(CPPDEFINES=["DEFERRED_RD_ENABLED"])
 # These need to be set before platform detection.
-if not env["rendering_device"] or not (env["forward_mobile_renderer"] or env["forward_plus_renderer"]):
+if not env["rendering_device"] or not (env["forward_mobile_renderer"] or env["forward_plus_renderer"] or env["deferred_renderer"]):
     env["d3d12"] = False
     env["metal"] = False
     env["vulkan"] = False
@@ -730,6 +737,10 @@ if not env["rendering_device"] or not (env["forward_mobile_renderer"] or env["fo
 # Must happen after the flags' definition, as configure is when most flags
 # are actually handled to change compile options, etc.
 detect.configure(env)
+
+if env["deferred_renderer"] and not env["vulkan"]:
+    print_error("Deferred+ currently requires the Vulkan rendering driver (vulkan=yes).")
+    Exit(255)
 
 platform_string = env["platform"]
 if env.get("simulator"):

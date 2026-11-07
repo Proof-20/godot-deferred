@@ -1214,17 +1214,22 @@ void EditorSettings::_load_defaults(Ref<ConfigFile> p_extra_config) {
 	EDITOR_SETTING_BASIC(Variant::INT, PROPERTY_HINT_ENUM, "project_manager/directory_naming_convention", 1, "No Convention,kebab-case,snake_case,camelCase,PascalCase,Title Case")
 
 #if defined(WEB_ENABLED)
-	// Web platform only supports `gl_compatibility`.
 	const String default_renderer = "gl_compatibility";
 #elif defined(FORWARD_RD_ENABLED) && (!defined(ANDROID_ENABLED) || !defined(MOBILE_RD_ENABLED))
 	const String default_renderer = "forward_plus";
 #elif defined(MOBILE_RD_ENABLED)
 	const String default_renderer = "mobile";
+#elif defined(RD_ENABLED) && defined(DEFERRED_RD_ENABLED) && defined(VULKAN_ENABLED)
+	const String default_renderer = "deferred";
 #else
-	// No other options.
 	const String default_renderer = "gl_compatibility";
 #endif
+
+#if defined(RD_ENABLED) && defined(DEFERRED_RD_ENABLED) && defined(VULKAN_ENABLED)
+	EDITOR_SETTING_BASIC(Variant::STRING, PROPERTY_HINT_ENUM, "project_manager/default_renderer", default_renderer, "forward_plus,mobile,gl_compatibility,deferred")
+#else
 	EDITOR_SETTING_BASIC(Variant::STRING, PROPERTY_HINT_ENUM, "project_manager/default_renderer", default_renderer, "forward_plus,mobile,gl_compatibility")
+#endif
 
 #undef EDITOR_SETTING
 #undef EDITOR_SETTING_BASIC

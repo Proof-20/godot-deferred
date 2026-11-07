@@ -14,3 +14,5 @@ if env["forward_mobile_renderer"]:
     SConscript("forward_mobile/SCsub")
 SConscript("shaders/SCsub")
 SConscript("spirv-reflect/SCsub")
+if env["deferred_renderer"]:
+    SConscript("deferred/SCsub")

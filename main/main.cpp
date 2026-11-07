@@ -2501,6 +2501,13 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 	renderer_hints += "mobile";
 	default_renderer_mobile = "mobile";
 #endif // MOBILE_RD_ENABLED
+
+#ifdef DEFERRED_RD_ENABLED
+	if (!renderer_hints.is_empty()) {
+		renderer_hints += ",";
+	}
+	renderer_hints += "deferred";
+#endif // DEFERRED_RD_ENABLED
 #endif
 
 	// And Compatibility next, or first if Vulkan is disabled.
@@ -2522,6 +2529,7 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 
 	if (!rendering_method.is_empty()) {
 		if (rendering_method != "forward_plus" &&
+				rendering_method != "deferred" &&
 				rendering_method != "mobile" &&
 				rendering_method != "gl_compatibility" &&
 				rendering_method != "dummy") {
@@ -2609,7 +2617,11 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 		bool valid_combination = false;
 		Vector<String> available_drivers;
 #ifdef RD_ENABLED
-		if (rendering_method == "forward_plus" || rendering_method == "mobile") {
+		if (rendering_method == "deferred") {
+#ifdef VULKAN_ENABLED
+			available_drivers.push_back("vulkan");
+#endif
+		} else if (rendering_method == "forward_plus" || rendering_method == "mobile") {
 #ifdef VULKAN_ENABLED
 			available_drivers.push_back("vulkan");
 #endif
@@ -2671,6 +2683,8 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 	if (rendering_driver.is_empty()) {
 		if (rendering_method == "dummy") {
 			rendering_driver = "dummy";
+		} else if (rendering_method == "deferred") {
+			rendering_driver = "vulkan";
 		} else if (rendering_method == "gl_compatibility") {
 			rendering_driver = GLOBAL_GET("rendering/gl_compatibility/driver");
 			rendering_driver_source = OS::RenderingSource::RENDERING_SOURCE_PROJECT_SETTING;
@@ -2682,6 +2696,21 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 
 	// always convert to lower case for consistency in the code
 	rendering_driver = rendering_driver.to_lower();
+
+	if (rendering_method == "deferred") {
+#if !defined(RD_ENABLED) || !defined(DEFERRED_RD_ENABLED)
+		OS::get_singleton()->print("Deferred+ is not enabled in this build. Build with deferred_renderer=yes.\n");
+		goto error;
+#elif !defined(VULKAN_ENABLED)
+		OS::get_singleton()->print("Deferred+ requires the Vulkan rendering driver.\n");
+		goto error;
+#else
+		if (rendering_driver != "vulkan") {
+			OS::get_singleton()->print("Deferred+ only supports the Vulkan rendering driver.\n");
+			goto error;
+		}
+#endif
+	}
 
 	OS::get_singleton()->set_current_rendering_driver_name(rendering_driver, rendering_driver_source);
 	OS::get_singleton()->set_current_rendering_method(rendering_method, rendering_method_source);

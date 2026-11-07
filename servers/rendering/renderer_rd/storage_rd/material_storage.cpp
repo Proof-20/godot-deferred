@@ -1530,6 +1530,7 @@ MaterialStorage::MaterialStorage() {
 	// Shaders
 	for (int i = 0; i < SHADER_TYPE_MAX; i++) {
 		shader_data_request_func[i] = nullptr;
+		material_data_request_func[i] = nullptr;
 	}
 
 	static_assert(sizeof(GlobalShaderUniforms::Value) == 16);
